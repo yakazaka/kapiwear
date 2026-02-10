@@ -48,4 +48,4 @@ export default function ProductCard({ product }: { product: ProductProps }) {
       </div>
     </Link>
   );
-}
+} 
