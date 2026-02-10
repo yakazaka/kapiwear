@@ -14,17 +14,20 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  // DÜZELTME BURADA YAPILDI: quantityChange parametresini ekledik
   addToCart: (product: any, size: string, quantityChange?: number) => void;
   removeFromCart: (id: number, size: string) => void;
   totalPrice: number;
   cartCount: number;
+  // YENİ EKLENENLER (Hata bunlardan çıkıyordu):
+  isOpen: boolean;
+  toggleCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isOpen, setIsOpen] = useState(false); // Sepet açık/kapalı durumu
 
   // 1. Uygulama ilk açıldığında LocalStorage'dan sepeti geri yükle
   useEffect(() => {
@@ -39,17 +42,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("kapiCart", JSON.stringify(cart));
   }, [cart]);
 
-  // Sepete Ekleme Fonksiyonu (Adet artırma/azaltma destekli)
+  // Sepeti Aç/Kapa Fonksiyonu
+  const toggleCart = () => setIsOpen((prev) => !prev);
+
+  // Sepete Ekleme Fonksiyonu
   const addToCart = (product: any, size: string, quantityChange: number = 1) => {
     setCart((prevCart) => {
-      // Ürün zaten sepette var mı?
       const existingItem = prevCart.find((item) => item.id === product.id && item.size === size);
 
       if (existingItem) {
-        // Varsa adedini güncelle
         const newQuantity = existingItem.quantity + quantityChange;
-        
-        // Eğer 1'in altına düşecekse işlem yapma (Silme işlemi çöp kutusuyla yapılır)
         if (newQuantity < 1) return prevCart;
 
         return prevCart.map((item) =>
@@ -58,14 +60,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
             : item
         );
       } else {
-        // Yoksa yeni ekle (Eğer azaltma isteğiyle geldiyse ve ürün yoksa ekleme)
         if (quantityChange < 1) return prevCart;
+        
+        // Ürün ekleyince sepeti otomatik açalım (Opsiyonel, havalı durur)
+        if (quantityChange > 0) setIsOpen(true);
 
         return [...prevCart, {
           id: product.id,
           name: product.name,
           price: product.price,
-          image: product.image_url || product.image, // Supabase'den veya sepetten gelen isim uyumu
+          image: product.image_url || product.image,
           size: size,
           quantity: quantityChange
         }];
@@ -73,23 +77,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Sepetten Silme Fonksiyonu
   const removeFromCart = (id: number, size: string) => {
     setCart((prevCart) => prevCart.filter((item) => !(item.id === id && item.size === size)));
   };
 
-  // Toplam Tutar ve Ürün Sayısı
   const totalPrice = cart.reduce((total, item) => total + item.price * item.quantity, 0);
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, totalPrice, cartCount }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, totalPrice, cartCount, isOpen, toggleCart }}>
       {children}
     </CartContext.Provider>
   );
 }
 
-// Kolay kullanım için hook
 export function useCart() {
   const context = useContext(CartContext);
   if (!context) {
