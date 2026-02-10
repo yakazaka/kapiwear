@@ -14,7 +14,8 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: any, size: string) => void;
+  // DÜZELTME BURADA YAPILDI: quantityChange parametresini ekledik
+  addToCart: (product: any, size: string, quantityChange?: number) => void;
   removeFromCart: (id: number, size: string) => void;
   totalPrice: number;
   cartCount: number;
@@ -25,7 +26,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // 1. Uygulama ilk açıldığında LocalStorage'dan (hafızadan) sepeti geri yükle
+  // 1. Uygulama ilk açıldığında LocalStorage'dan sepeti geri yükle
   useEffect(() => {
     const savedCart = localStorage.getItem("kapiCart");
     if (savedCart) {
@@ -38,28 +39,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("kapiCart", JSON.stringify(cart));
   }, [cart]);
 
-  // Sepete Ekleme Fonksiyonu
-  const addToCart = (product: any, size: string) => {
+  // Sepete Ekleme Fonksiyonu (Adet artırma/azaltma destekli)
+  const addToCart = (product: any, size: string, quantityChange: number = 1) => {
     setCart((prevCart) => {
-      // Ürün zaten sepette var mı? (Aynı ID ve Aynı Beden)
+      // Ürün zaten sepette var mı?
       const existingItem = prevCart.find((item) => item.id === product.id && item.size === size);
 
       if (existingItem) {
-        // Varsa sadece adedini artır
+        // Varsa adedini güncelle
+        const newQuantity = existingItem.quantity + quantityChange;
+        
+        // Eğer 1'in altına düşecekse işlem yapma (Silme işlemi çöp kutusuyla yapılır)
+        if (newQuantity < 1) return prevCart;
+
         return prevCart.map((item) =>
           item.id === product.id && item.size === size
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: newQuantity }
             : item
         );
       } else {
-        // Yoksa yeni ekle
+        // Yoksa yeni ekle (Eğer azaltma isteğiyle geldiyse ve ürün yoksa ekleme)
+        if (quantityChange < 1) return prevCart;
+
         return [...prevCart, {
           id: product.id,
           name: product.name,
           price: product.price,
-          image: product.image_url, // Supabase'den gelen isim
+          image: product.image_url || product.image, // Supabase'den veya sepetten gelen isim uyumu
           size: size,
-          quantity: 1
+          quantity: quantityChange
         }];
       }
     });
