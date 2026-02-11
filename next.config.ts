@@ -4,9 +4,13 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "images.unsplash.com", // Unsplash resimlerine izin ver
+        protocol: 'https',
+        hostname: 'fegitkhxlrsxpizckgoj.supabase.co',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      }
     ],
   },
 };

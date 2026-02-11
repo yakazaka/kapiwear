@@ -1,5 +1,5 @@
 "use client";
-
+import toast from "react-hot-toast";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 // Sepetteki ürünün tipi
@@ -18,7 +18,6 @@ interface CartContextType {
   removeFromCart: (id: number, size: string) => void;
   totalPrice: number;
   cartCount: number;
-  // YENİ EKLENENLER (Hata bunlardan çıkıyordu):
   isOpen: boolean;
   toggleCart: () => void;
 }
@@ -27,9 +26,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isOpen, setIsOpen] = useState(false); // Sepet açık/kapalı durumu
+  const [isOpen, setIsOpen] = useState(false);
 
-  // 1. Uygulama ilk açıldığında LocalStorage'dan sepeti geri yükle
+  // 1. LocalStorage'dan sepeti geri yükle
   useEffect(() => {
     const savedCart = localStorage.getItem("kapiCart");
     if (savedCart) {
@@ -42,10 +41,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("kapiCart", JSON.stringify(cart));
   }, [cart]);
 
-  // Sepeti Aç/Kapa Fonksiyonu
   const toggleCart = () => setIsOpen((prev) => !prev);
 
-  // Sepete Ekleme Fonksiyonu
+  // Sepete Ekleme Fonksiyonu (GÜNCELLENDİ)
   const addToCart = (product: any, size: string, quantityChange: number = 1) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id && item.size === size);
@@ -53,6 +51,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existingItem) {
         const newQuantity = existingItem.quantity + quantityChange;
         if (newQuantity < 1) return prevCart;
+
+        // BİLDİRİM: setTimeout ile render dışına itildi
+        if (quantityChange > 0) {
+          setTimeout(() => {
+            toast.success(`${product.name} eklendi!`);
+          }, 0);
+        }
 
         return prevCart.map((item) =>
           item.id === product.id && item.size === size
@@ -62,8 +67,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } else {
         if (quantityChange < 1) return prevCart;
         
-        // Ürün ekleyince sepeti otomatik açalım (Opsiyonel, havalı durur)
         if (quantityChange > 0) setIsOpen(true);
+
+        // BİLDİRİM: setTimeout ile render dışına itildi
+        setTimeout(() => {
+          toast.success(`${product.name} eklendi!`);
+        }, 0);
 
         return [...prevCart, {
           id: product.id,
